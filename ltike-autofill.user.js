@@ -1,8 +1,15 @@
 // ==UserScript==
-// @name         L-tike 智能填写（v5 多Profile快捷+信用卡自动选择）
-// @namespace    https://zhl.dev/
-// @version      5.0
-// @description  一键填写＋信用卡付款＋多Profile菜单＋快捷切换＋自动模式
+// @name         L-tike AutoFill Pro
+// @namespace    https://pzl233.dev/
+// @version      5.1
+// @description  一键填写 L-tike 表单 + 自动选择信用卡付款 + Profile 管理 + 折叠菜单快捷切换 + 自动模式
+// @author       pzl233
+// @license      MIT
+// @homepage     https://github.com/pzl233/ltike-autofill
+// @supportURL   https://github.com/pzl233/ltike-autofill/issues
+// @updateURL    https://github.com/pzl233/ltike-autofill/raw/main/ltike-autofill.user.js
+// @downloadURL  https://github.com/pzl233/ltike-autofill/raw/main/ltike-autofill.user.js
+// @icon         https://l-tike.com/favicon.ico
 // @match        https://l-tike.com/*
 // @grant        none
 // ==/UserScript==
@@ -10,7 +17,7 @@
 (function () {
     'use strict';
   
-    // ========== 默认资料 ==========
+    // 默认只有一个展示用 Profile
     const defaultProfiles = {
       '展示用 Profile': {
         elPhone: '08012345678',
@@ -35,12 +42,10 @@
       }
     };
   
-    // ========== 初始化状态 ==========
     let profiles = JSON.parse(localStorage.getItem('ltikeProfiles') || 'null') || defaultProfiles;
     let currentProfile = localStorage.getItem('ltikeCurrentProfile') || Object.keys(profiles)[0];
     let autoFill = localStorage.getItem('ltikeAutoFill') === 'true';
   
-    // ========== 工具函数 ==========
     const setVal = (sel, val) => {
       const el = document.querySelector(sel);
       if (el) {
@@ -63,9 +68,8 @@
       localStorage.setItem('ltikeAutoFill', autoFill);
     };
   
-    // ========== 自动填写核心 ==========
     const fillForm = (d) => {
-      // 自动选择“クレジットカード”
+      // 自动选择信用卡付款
       const credit = document.querySelector('input[value="02"], input[name="PAYMENT_MTHD_SEL"][value="2"]');
       if (credit) {
         credit.checked = true;
@@ -97,7 +101,6 @@
       }
     };
   
-    // ========== 编辑窗口 ==========
     const showEditor = () => {
       const overlay = document.createElement('div');
       overlay.style = `
@@ -113,13 +116,11 @@
       `;
       box.innerHTML = `
         <h2>编辑：${currentProfile}</h2>
-        ${Object.entries(p).map(([k, v]) => {
-          if (typeof v === 'boolean') {
-            return `<label><input type="checkbox" id="edit-${k}" ${v ? 'checked' : ''}/> ${k}</label><br>`;
-          } else {
-            return `<label>${k}:<br><input id="edit-${k}" value="${v}" style="width:100%;padding:4px;margin-bottom:4px;"></label>`;
-          }
-        }).join('')}
+        ${Object.entries(p).map(([k, v]) =>
+          typeof v === 'boolean'
+            ? `<label><input type="checkbox" id="edit-${k}" ${v ? 'checked' : ''}/> ${k}</label><br>`
+            : `<label>${k}:<br><input id="edit-${k}" value="${v}" style="width:100%;padding:4px;margin-bottom:4px;"></label>`
+        ).join('')}
         <div style="text-align:right;margin-top:8px;">
           <button id="save" style="${btnMini('#007aff')}">保存</button>
           <button id="cancel" style="${btnMini('#aaa')}">取消</button>
@@ -141,12 +142,10 @@
       box.querySelector('#cancel').onclick = () => document.body.removeChild(overlay);
     };
   
-    // ========== 创建主菜单 ==========
     const createMenu = () => {
       const container = document.createElement('div');
       container.style = `
-        position:fixed;top:20px;right:20px;z-index:9999;
-        font-family:sans-serif;
+        position:fixed;top:20px;right:20px;z-index:9999;font-family:sans-serif;
       `;
   
       const mainBtn = document.createElement('button');
@@ -158,68 +157,27 @@
         display:none;position:absolute;top:48px;right:0;
         background:#fff;border:1px solid #ccc;border-radius:8px;
         box-shadow:0 4px 10px rgba(0,0,0,0.15);
-        padding:8px;width:260px;max-height:80vh;overflow-y:auto;
+        padding:8px;width:260px;
       `;
   
-      // 动态渲染菜单内容
-      const renderMenu = () => {
-        menu.innerHTML = `
-          <b>快速切换 Profile: </b><br>
-          ${Object.keys(profiles)
-            .map(p => `<button class="profileBtn" data-name="${p}" 
-                style="width:100%;text-align:left;${btnMini(p === currentProfile ? '#007aff' : '#8e8e93')}">
-                ${p}
-              </button>`)
-            .join('')}
-          <hr>
-          <button id="editBtn" style="width:100%;${btnMini('#34c759')}">📝 编辑当前</button>
-          <button id="addBtn" style="width:100%;${btnMini('#007aff')}">➕ 新建</button>
-          <button id="delBtn" style="width:100%;${btnMini('#ff3b30')}">🗑 删除</button>
-          <hr>
-          <label style="display:flex;align-items:center;justify-content:space-between;">
-            <span>⚡ 自动填写</span>
-            <input type="checkbox" id="autoFillChk" ${autoFill ? 'checked' : ''}>
-          </label>
-        `;
+      menu.innerHTML = `
+        <button id="doFill" style="width:100%;${btnMini('#007aff')}">🟦 一键填写</button>
+        <button id="editBtn" style="width:100%;${btnMini('#34c759')}">📝 编辑</button>
+        <hr>
+        <label style="display:flex;align-items:center;justify-content:space-between;">
+          <span>⚡ 自动填写</span>
+          <input type="checkbox" id="autoFillChk" ${autoFill ? 'checked' : ''}>
+        </label>
+      `;
   
-        menu.querySelectorAll('.profileBtn').forEach(btn => {
-          btn.onclick = () => {
-            currentProfile = btn.dataset.name;
-            saveAll();
-            fillForm(profiles[currentProfile]);
-            renderMenu();
-          };
-        });
-  
-        menu.querySelector('#editBtn').onclick = showEditor;
-        menu.querySelector('#addBtn').onclick = () => {
-          const n = prompt('新 Profile 名称：');
-          if (n && !profiles[n]) {
-            profiles[n] = JSON.parse(JSON.stringify(profiles[currentProfile]));
-            currentProfile = n;
-            saveAll();
-            renderMenu();
-          }
-        };
-        menu.querySelector('#delBtn').onclick = () => {
-          if (confirm(`确定删除「${currentProfile}」吗？`)) {
-            delete profiles[currentProfile];
-            currentProfile = Object.keys(profiles)[0];
-            saveAll();
-            renderMenu();
-          }
-        };
-        menu.querySelector('#autoFillChk').onchange = e => {
-          autoFill = e.target.checked;
-          saveAll();
-        };
+      menu.querySelector('#doFill').onclick = () => fillForm(profiles[currentProfile]);
+      menu.querySelector('#editBtn').onclick = showEditor;
+      menu.querySelector('#autoFillChk').onchange = e => {
+        autoFill = e.target.checked;
+        saveAll();
       };
   
-      renderMenu();
-  
-      mainBtn.onclick = () => {
-        menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-      };
+      mainBtn.onclick = () => menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
       document.addEventListener('click', e => {
         if (!container.contains(e.target)) menu.style.display = 'none';
       });
@@ -244,7 +202,6 @@
       padding:6px 8px;margin-top:4px;cursor:pointer;
     `;
   
-    // ========== 初始化 ==========
     window.addEventListener('load', () => {
       setTimeout(() => {
         createMenu();
